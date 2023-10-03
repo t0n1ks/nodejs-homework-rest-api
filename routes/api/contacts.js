@@ -36,29 +36,13 @@ router.get('/:contactId', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, email, phone } = req.body;
-  const missingFields = [];
-
-  if (!name) {
-    missingFields.push('name');
-  }
-  if (!email) {
-    missingFields.push('email');
-  }
-  if (!phone) {
-    missingFields.push('phone');
-  }
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({ message: `Missing required ${missingFields.join(', ')} fields` });
-  }
-
   const validationResult = createUserDataValidator(req.body);
 
-  if (validationResult.error) {
-    return res.status(400).json({ message: validationResult.error.details[0].message });
+  if (validationResult.messages) {
+    return res.status(400).json({ messages: validationResult.messages });
   }
 
+  const { name, email, phone } = req.body;
   const newContact = {
     id: uuidv4(),
     name,
@@ -73,6 +57,7 @@ router.post('/', async (req, res) => {
 
   res.status(201).json(newContact);
 });
+
 
 
 router.delete('/:contactId', async (req, res) => {
@@ -91,7 +76,7 @@ router.delete('/:contactId', async (req, res) => {
   res.status(200).json({ message: 'Contact deleted' });
 });
 
-router.put('/:contactId', async (req, res) => {
+router.put('/:contactId', express.json(), async (req, res) => {
   const { contactId } = req.params;
   const { name, email, phone } = req.body;
   const contacts = await readContacts();
@@ -99,6 +84,10 @@ router.put('/:contactId', async (req, res) => {
 
   if (index === -1) {
     return res.status(404).json({ message: 'Not found' });
+  }
+
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ message: 'Missing fields' });
   }
 
   const missingFields = [];
@@ -119,8 +108,8 @@ router.put('/:contactId', async (req, res) => {
 
   const validationResult = createUserDataValidator(req.body);
 
-  if (validationResult.error) {
-    return res.status(400).json({ message: validationResult.error.details[0].message });
+  if (validationResult.messages && validationResult.messages.length > 0) {
+    return res.status(400).json({ messages: validationResult.messages });
   }
 
   if (name) contacts[index].name = name;
@@ -131,6 +120,5 @@ router.put('/:contactId', async (req, res) => {
 
   res.status(200).json(contacts[index]);
 });
-
 
 module.exports = router;
