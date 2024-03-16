@@ -20,7 +20,7 @@ const writeContacts = async (data) => {
 
 router.get('/', async (req, res) => {
   const contacts = await readContacts();
-  res.status(200).json( contacts );
+  res.status(200).json(contacts);
 });
 
 router.get('/:contactId', async (req, res) => {
@@ -32,7 +32,7 @@ router.get('/:contactId', async (req, res) => {
     return res.status(404).json({ message: 'Not found' });
   }
 
-  res.status(200).json( contact );
+  res.status(200).json(contact);
 });
 
 router.post('/', async (req, res) => {
@@ -58,8 +58,6 @@ router.post('/', async (req, res) => {
   res.status(201).json(newContact);
 });
 
-
-
 router.delete('/:contactId', async (req, res) => {
   const { contactId } = req.params;
   const contacts = await readContacts();
@@ -69,11 +67,11 @@ router.delete('/:contactId', async (req, res) => {
     return res.status(404).json({ message: 'Not found' });
   }
 
-  contacts.splice(index, 1);
+  const deletedContact = contacts.splice(index, 1)[0]; 
 
   await writeContacts(contacts);
 
-  res.status(200).json({ message: 'Contact deleted' });
+  res.status(200).json(deletedContact);
 });
 
 router.put('/:contactId', express.json(), async (req, res) => {
@@ -87,34 +85,21 @@ router.put('/:contactId', express.json(), async (req, res) => {
   }
 
   if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ message: 'Missing fields' });
+    return res.status(400).json({ message: 'Body must have at least one field' });
   }
 
-  const missingFields = [];
+  const validationResult = createUserDataValidator(req.body, true);
 
-  if (!name) {
-    missingFields.push('name');
-  }
-  if (!email) {
-    missingFields.push('email');
-  }
-  if (!phone) {
-    missingFields.push('phone');
-  }
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({ message: `Missing required ${missingFields.join(', ')} fields` });
-  }
-
-  const validationResult = createUserDataValidator(req.body);
-
-  if (validationResult.messages && validationResult.messages.length > 0) {
+  if (validationResult.messages) {
     return res.status(400).json({ messages: validationResult.messages });
   }
 
-  if (name) contacts[index].name = name;
-  if (email) contacts[index].email = email;
-  if (phone) contacts[index].phone = phone;
+  contacts[index] = {
+    ...contacts[index],
+    name: name || contacts[index].name,
+    email: email || contacts[index].email,
+    phone: phone || contacts[index].phone,
+  };
 
   await writeContacts(contacts);
 
